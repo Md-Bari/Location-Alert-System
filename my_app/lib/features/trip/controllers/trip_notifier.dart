@@ -238,15 +238,18 @@ class TripNotifier extends StateNotifier<TripState> {
     );
   }
 
-  Future<void> endTrip() async {
-    await stopTrackingStream();
-    await _notificationService.cancelNotifications();
+  void endTrip() {
+    // 1. Immediately reset state synchronously for 0ms UI latency
     state = state.copyWith(
       clearTrip: true,
       isWarningAlertVisible: false,
       isArrivalAlertVisible: false,
       errorMessage: null,
     );
+
+    // 2. Perform platform cleanup asynchronously in background
+    stopTrackingStream();
+    _notificationService.cancelNotifications();
   }
 
   Future<void> stopTrackingStream() async {
