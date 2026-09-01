@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vibration/vibration.dart';
 import '../../../core/constants/location_constants.dart';
+
+final notificationServiceProvider =
+    Provider<NotificationService>((ref) => NotificationService());
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -163,12 +167,55 @@ class NotificationService {
     );
   }
 
+  /// Triggers direct notification regarding application version and updates.
+  Future<void> showAppUpdateNotification({
+    required String currentVersion,
+    bool isUpdateAvailable = false,
+  }) async {
+    await init();
+
+    final androidDetails = const AndroidNotificationDetails(
+      LocationConstants.notificationChannelId,
+      LocationConstants.notificationChannelName,
+      channelDescription: LocationConstants.notificationChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+      presentBadge: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final title = isUpdateAvailable
+        ? '🎉 New App Update Available!'
+        : '🚀 Location Alert Up to Date';
+    final body = isUpdateAvailable
+        ? 'A new version of Location Alert is available. Tap to update.'
+        : 'Your app is running the latest version (v$currentVersion). Direct update notifications are enabled!';
+
+    await _flutterLocalNotificationsPlugin.show(
+      999,
+      title,
+      body,
+      details,
+    );
+  }
+
   /// Cancels active notifications.
   Future<void> cancelNotifications() async {
     await _flutterLocalNotificationsPlugin
         .cancel(LocationConstants.warningNotificationId);
     await _flutterLocalNotificationsPlugin
         .cancel(LocationConstants.arrivalNotificationId);
+    await _flutterLocalNotificationsPlugin.cancel(999);
   }
 
   void _triggerVibrationPattern({required bool isArrival}) async {

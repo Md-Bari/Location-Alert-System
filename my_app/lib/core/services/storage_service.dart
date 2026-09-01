@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/app_constants.dart';
 import '../../features/destination/models/destination_model.dart';
 
@@ -64,6 +66,17 @@ class StorageService {
     return _prefs.setBool(AppConstants.keyNotificationsEnabled, enabled);
   }
 
+  // App Update Notifications Enabled
+  bool getAppUpdateNotificationsEnabled() {
+    return _prefs.getBool(AppConstants.keyAppUpdateNotificationsEnabled) ??
+        AppConstants.defaultAppUpdateNotificationsEnabled;
+  }
+
+  Future<bool> setAppUpdateNotificationsEnabled(bool enabled) {
+    return _prefs.setBool(
+        AppConstants.keyAppUpdateNotificationsEnabled, enabled);
+  }
+
   // Dark Mode
   bool getDarkMode() {
     return _prefs.getBool(AppConstants.keyDarkMode) ?? true;
@@ -71,6 +84,16 @@ class StorageService {
 
   Future<bool> setDarkMode(bool enabled) {
     return _prefs.setBool(AppConstants.keyDarkMode, enabled);
+  }
+
+  // Live Traffic Overlay Enabled
+  bool getTrafficEnabled() {
+    return _prefs.getBool(AppConstants.keyTrafficEnabled) ??
+        AppConstants.defaultTrafficEnabled;
+  }
+
+  Future<bool> setTrafficEnabled(bool enabled) {
+    return _prefs.setBool(AppConstants.keyTrafficEnabled, enabled);
   }
 
   // Recent Destinations (Offline Persistence)
@@ -91,10 +114,12 @@ class StorageService {
   Future<bool> saveRecentDestination(DestinationModel destination) async {
     final current = getRecentDestinations();
     // Deduplicate existing entry
-    current.removeWhere((d) =>
-        d.id == destination.id ||
-        (d.latitude == destination.latitude &&
-            d.longitude == destination.longitude));
+    current.removeWhere(
+      (d) =>
+          d.id == destination.id ||
+          (d.latitude == destination.latitude &&
+              d.longitude == destination.longitude),
+    );
 
     current.insert(0, destination);
     if (current.length > 10) {

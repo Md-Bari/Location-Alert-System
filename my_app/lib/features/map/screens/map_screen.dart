@@ -11,6 +11,7 @@ import '../../location/models/app_location.dart';
 import '../models/route_model.dart';
 import '../services/routing_service.dart';
 import '../widgets/trip_bottom_sheet.dart';
+import '../../settings/controllers/settings_notifier.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../trip/controllers/trip_notifier.dart';
 import '../../trip/models/trip_model.dart';
@@ -154,6 +155,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final currentLocation = locationState.currentLocation;
     final selectedDestination = destinationState.selectedDestination;
     final activeTrip = tripState.activeTrip;
+    final settings = ref.watch(settingsNotifierProvider);
 
     final initialCenter = currentLocation?.toLatLng() ??
         (selectedDestination?.toLatLng() ?? const LatLng(23.777176, 90.399452));
@@ -214,6 +216,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 urlTemplate: AppConstants.osmTileUrlTemplate,
                 userAgentPackageName: AppConstants.mapUserAgent,
               ),
+
+              if (settings.isTrafficEnabled)
+                TileLayer(
+                  urlTemplate: AppConstants.trafficTileUrlTemplate,
+                  userAgentPackageName: AppConstants.mapUserAgent,
+                ),
 
               // Route Polyline Layer
               if (_routeModel != null && _routeModel!.points.isNotEmpty)
@@ -344,12 +352,29 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
 
-          // 3. Floating Map Controls (My Location & Destination Focus)
+          // 3. Floating Map Controls (Traffic Toggle, My Location & Destination Focus)
           Positioned(
             right: 16,
             bottom: 220,
             child: Column(
               children: [
+                FloatingActionButton.small(
+                  heroTag: 'fab_traffic',
+                  backgroundColor: settings.isTrafficEnabled
+                      ? const Color(0xFF10B981)
+                      : Theme.of(context).cardColor,
+                  foregroundColor: settings.isTrafficEnabled
+                      ? Colors.white
+                      : Colors.grey[700],
+                  tooltip: 'Toggle Live Traffic Flow',
+                  child: const Icon(Icons.traffic_rounded),
+                  onPressed: () {
+                    ref
+                        .read(settingsNotifierProvider.notifier)
+                        .setTrafficEnabled(!settings.isTrafficEnabled);
+                  },
+                ),
+                const SizedBox(height: 8),
                 if (selectedDestination != null) ...[
                   FloatingActionButton.small(
                     heroTag: 'fab_dest',

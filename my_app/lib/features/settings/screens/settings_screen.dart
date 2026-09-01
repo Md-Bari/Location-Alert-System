@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../notifications/services/notification_service.dart';
 import '../controllers/settings_notifier.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -10,6 +11,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsNotifierProvider);
     final settingsNotifier = ref.read(settingsNotifierProvider.notifier);
+    final notificationService = ref.read(notificationServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -150,11 +152,74 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
+                  secondary: const Icon(Icons.traffic_rounded),
+                  title: const Text('Live Traffic Flow Layer'),
+                  subtitle: const Text('Show real-time road traffic congestion on map'),
+                  value: settings.isTrafficEnabled,
+                  onChanged: (val) => settingsNotifier.setTrafficEnabled(val),
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
                   secondary: const Icon(Icons.dark_mode_rounded),
                   title: const Text('Dark Mode'),
                   subtitle: const Text('Toggle app dark theme'),
                   value: settings.isDarkMode,
                   onChanged: (val) => settingsNotifier.toggleDarkMode(val),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // App Updates Section
+          const Text(
+            'APPLICATION UPDATES',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.blue,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.system_update_rounded),
+                  title: const Text('Direct App Update Notifications'),
+                  subtitle: const Text('Receive push & direct notifications for new releases'),
+                  value: settings.isAppUpdateNotificationsEnabled,
+                  onChanged: (val) =>
+                      settingsNotifier.setAppUpdateNotificationsEnabled(val),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.update_rounded, color: Colors.blue),
+                  title: const Text(
+                    'Check for Updates Now',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text('Current Version: v${AppConstants.appVersion}'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () async {
+                    if (settings.isAppUpdateNotificationsEnabled) {
+                      await notificationService.showAppUpdateNotification(
+                        currentVersion: AppConstants.appVersion,
+                      );
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Location Alert v${AppConstants.appVersion} is up to date!',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
