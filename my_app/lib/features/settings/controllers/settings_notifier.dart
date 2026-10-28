@@ -29,13 +29,27 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
     );
     await _storageService.setWarningDistance(validDistance);
     state = state.copyWith(warningDistance: validDistance);
+
+    // Arrival radius must stay inside the warning radius so alerts fire in order.
+    final maxArrival = validDistance - minThresholdGapMeters;
+    if (state.arrivalDistance > maxArrival) {
+      await updateArrivalDistance(maxArrival);
+    }
   }
 
+  /// Minimum gap between the warning and arrival radii.
+  static const double minThresholdGapMeters = 10.0;
+
   Future<void> updateArrivalDistance(double distance) async {
-    final validDistance = distance.clamp(
-      AppConstants.minArrivalDistanceMeters,
-      AppConstants.maxArrivalDistanceMeters,
-    );
+    final validDistance = distance
+        .clamp(
+          AppConstants.minArrivalDistanceMeters,
+          AppConstants.maxArrivalDistanceMeters,
+        )
+        .clamp(
+          AppConstants.minArrivalDistanceMeters,
+          state.warningDistance - minThresholdGapMeters,
+        );
     await _storageService.setArrivalDistance(validDistance);
     state = state.copyWith(arrivalDistance: validDistance);
   }

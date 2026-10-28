@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/distance_calculator.dart';
 import '../../../core/utils/gps_noise_filter.dart';
 import '../../location/controllers/location_notifier.dart';
 import '../../location/models/app_location.dart';
-import '../../location/services/location_service.dart';
 import '../../notifications/services/notification_service.dart';
 import '../../settings/controllers/settings_notifier.dart';
 import '../../settings/models/settings_model.dart';
@@ -41,19 +39,20 @@ class TripState {
   }
 }
 
+/// Evaluates live positions from [locationNotifierProvider] against proximity alert thresholds.
 class TripNotifier extends StateNotifier<TripState> {
-  final LocationService _locationService;
   final NotificationService _notificationService;
   final GpsNoiseFilter _noiseFilter = GpsNoiseFilter();
 
-  StreamSubscription<AppLocation>? _locationSubscription;
+  /// Called with true while a trip needs uninterrupted (background) GPS updates.
+  final void Function(bool active)? onActiveTrackingChanged;
   SettingsModel _settings;
 
   TripNotifier(
-    this._locationService,
     this._notificationService,
-    this._settings,
-  ) : super(const TripState());
+    this._settings, {
+    this.onActiveTrackingChanged,
+  }) : super(const TripState());
 
   void updateSettings(SettingsModel newSettings) {
     _settings = newSettings;
@@ -66,7 +65,6 @@ class TripNotifier extends StateNotifier<TripState> {
     required double destinationLng,
     required String destinationName,
   }) async {
-    await stopTrackingStream();
     _noiseFilter.reset();
 
     final initialDistance = DistanceCalculator.calculateHaversineDistance(
@@ -102,19 +100,8 @@ class TripNotifier extends StateNotifier<TripState> {
       errorMessage: null,
     );
 
-    _startLocationStream();
-  }
-
-  void _startLocationStream() {
-    _locationSubscription?.cancel();
-    _locationSubscription = _locationService.getPositionStream().listen(
-      (location) => handleLocationUpdate(location),
-      onError: (err) {
-        state = state.copyWith(
-          errorMessage: 'Location stream interrupted: $err',
-        );
-      },
-    );
+    onActiveTrackingChanged?.call(true);
+    _notificationService.requestPermission();
   }
 
   /// Evaluates location updates against GPS noise filters and proximity alert thresholds.
@@ -223,7 +210,7 @@ class TripNotifier extends StateNotifier<TripState> {
   void pauseTrip() {
     final trip = state.activeTrip;
     if (trip == null) return;
-    _locationSubscription?.pause();
+    onActiveTrackingChanged?.call(false);
     state = state.copyWith(
       activeTrip: trip.copyWith(trackingStatus: TrackingStatus.paused),
     );
@@ -232,9 +219,13 @@ class TripNotifier extends StateNotifier<TripState> {
   void resumeTrip() {
     final trip = state.activeTrip;
     if (trip == null) return;
-    _locationSubscription?.resume();
+    onActiveTrackingChanged?.call(true);
     state = state.copyWith(
-      activeTrip: trip.copyWith(trackingStatus: TrackingStatus.tracking),
+      activeTrip: trip.copyWith(
+        trackingStatus: trip.warningTriggered
+            ? TrackingStatus.approaching
+            : TrackingStatus.tracking,
+      ),
     );
   }
 
@@ -252,33 +243,35 @@ class TripNotifier extends StateNotifier<TripState> {
     _notificationService.cancelNotifications();
   }
 
+  /// Leaves background GPS mode; the foreground live stream keeps running for the map.
   Future<void> stopTrackingStream() async {
-    await _locationSubscription?.cancel();
-    _locationSubscription = null;
-  }
-
-  @override
-  void dispose() {
-    stopTrackingStream();
-    super.dispose();
+    onActiveTrackingChanged?.call(false);
   }
 }
 
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  final service = NotificationService();
-  service.init();
-  return service;
-});
-
 final tripNotifierProvider =
     StateNotifierProvider<TripNotifier, TripState>((ref) {
-  final locationService = ref.watch(locationServiceProvider);
   final notificationService = ref.watch(notificationServiceProvider);
-  final settings = ref.watch(settingsNotifierProvider);
 
-  final notifier = TripNotifier(locationService, notificationService, settings);
+  // Read (not watch) settings: watching would rebuild the notifier and wipe an active trip
+  // whenever any setting changes, e.g. toggling the traffic layer.
+  final notifier = TripNotifier(
+    notificationService,
+    ref.read(settingsNotifierProvider),
+    onActiveTrackingChanged: (active) {
+      ref.read(locationNotifierProvider.notifier).setBackgroundTracking(active);
+    },
+  );
   ref.listen<SettingsModel>(settingsNotifierProvider, (previous, next) {
     notifier.updateSettings(next);
+  });
+
+  // Feed every live GPS fix into the alert engine.
+  ref.listen<LocationState>(locationNotifierProvider, (previous, next) {
+    final location = next.currentLocation;
+    if (location != null && !identical(location, previous?.currentLocation)) {
+      notifier.handleLocationUpdate(location);
+    }
   });
 
   return notifier;

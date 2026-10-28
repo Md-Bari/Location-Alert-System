@@ -1,6 +1,9 @@
 import 'package:latlong2/latlong.dart';
 
 class RouteModel {
+  /// Assumed travel speed for estimates without a real route (36 km/h).
+  static const double fallbackSpeedMps = 10.0;
+
   final List<LatLng> points;
   final double distanceMeters;
   final double durationSeconds;
@@ -17,7 +20,7 @@ class RouteModel {
     return RouteModel(
       points: [start, destination],
       distanceMeters: distanceMeters,
-      durationSeconds: (distanceMeters / 10.0), // rough estimate at 36 km/h
+      durationSeconds: distanceMeters / fallbackSpeedMps,
       isStraightLineFallback: true,
     );
   }

@@ -26,6 +26,24 @@ class DistanceCalculator {
     return earthRadiusMeters * c;
   }
 
+  /// Calculates initial compass bearing in degrees (0-360, 0 = North) from start to destination.
+  static double calculateBearing({
+    required double startLatitude,
+    required double startLongitude,
+    required double destinationLatitude,
+    required double destinationLongitude,
+  }) {
+    final lat1 = _toRadians(startLatitude);
+    final lat2 = _toRadians(destinationLatitude);
+    final dLng = _toRadians(destinationLongitude - startLongitude);
+
+    final y = sin(dLng) * cos(lat2);
+    final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng);
+
+    final bearing = atan2(y, x) * (180.0 / pi);
+    return (bearing + 360.0) % 360.0;
+  }
+
   static double _toRadians(double degree) {
     return degree * (pi / 180.0);
   }

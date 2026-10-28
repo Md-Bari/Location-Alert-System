@@ -42,6 +42,7 @@ class DestinationState {
 class DestinationNotifier extends StateNotifier<DestinationState> {
   final DestinationSearchService _searchService;
   final StorageService? _storageService;
+  int _searchRequestId = 0;
 
   DestinationNotifier(this._searchService, [this._storageService])
       : super(DestinationState(
@@ -74,6 +75,7 @@ class DestinationNotifier extends StateNotifier<DestinationState> {
     double? userLat,
     double? userLng,
   }) async {
+    final requestId = ++_searchRequestId;
     if (query.trim().isEmpty) {
       state = state.copyWith(searchResults: [], isSearching: false);
       return;
@@ -86,8 +88,11 @@ class DestinationNotifier extends StateNotifier<DestinationState> {
         userLat: userLat,
         userLng: userLng,
       );
+      // Drop responses for queries the user has already typed past.
+      if (requestId != _searchRequestId) return;
       state = state.copyWith(searchResults: results, isSearching: false);
     } catch (e) {
+      if (requestId != _searchRequestId) return;
       state = state.copyWith(
         isSearching: false,
         errorMessage: 'Failed to search places. Check internet connection.',

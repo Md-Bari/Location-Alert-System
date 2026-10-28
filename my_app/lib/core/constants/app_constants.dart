@@ -28,9 +28,15 @@ class AppConstants {
   static const String keyDarkMode = 'dark_mode';
   static const String keyTrafficEnabled = 'traffic_enabled';
 
-  // OpenStreetMap & Traffic Tile Templates
+  // OpenStreetMap, CARTO Basemaps & Traffic Tile Templates
   static const String osmTileUrlTemplate =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const String lightTileUrlTemplate =
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  static const String darkTileUrlTemplate =
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+  static const List<String> cartoSubdomains = ['a', 'b', 'c', 'd'];
+  static const String mapAttribution = '© OpenStreetMap contributors © CARTO';
   static const String trafficTileUrlTemplate =
       'https://mt1.google.com/vt/lyrs=traffic&x={x}&y={y}&z={z}';
   static const String mapUserAgent = 'com.locationalert.app';

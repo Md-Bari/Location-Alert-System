@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../app/theme.dart';
 import '../../../core/utils/distance_calculator.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../location/controllers/location_notifier.dart';
@@ -17,11 +20,26 @@ class DestinationSearchScreen extends ConsumerStatefulWidget {
 class _DestinationSearchScreenState
     extends ConsumerState<DestinationSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Debounces keystrokes so Nominatim (max 1 request/second) is not flooded.
+  void _scheduleSearch(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 450), () {
+      final location = ref.read(locationNotifierProvider).currentLocation;
+      ref.read(destinationNotifierProvider.notifier).searchPlaces(
+            query,
+            userLat: location?.latitude,
+            userLng: location?.longitude,
+          );
+    });
   }
 
   @override
@@ -46,24 +64,25 @@ class _DestinationSearchScreenState
             CustomTextField(
               controller: _searchController,
               hintText: 'Search place (e.g. Dhanmondi, ধানমন্ডি, Gulshan)',
-              prefixIcon: Icons.search,
-              autofocus: false,
+              prefixIcon: Icons.search_rounded,
+              autofocus: true,
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.close_rounded),
                       onPressed: () {
+                        _debounce?.cancel();
                         _searchController.clear();
-                        destinationNotifier.searchPlaces(
-                          '',
-                          userLat: currentLocation?.latitude,
-                          userLng: currentLocation?.longitude,
-                        );
+                        destinationNotifier.searchPlaces('');
                         setState(() {});
                       },
                     )
                   : null,
               onChanged: (query) {
                 setState(() {});
+                _scheduleSearch(query);
+              },
+              onSubmitted: (query) {
+                _debounce?.cancel();
                 destinationNotifier.searchPlaces(
                   query,
                   userLat: currentLocation?.latitude,
@@ -74,7 +93,10 @@ class _DestinationSearchScreenState
             const SizedBox(height: 16),
 
             if (destinationState.isSearching) ...[
-              const LinearProgressIndicator(),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: const LinearProgressIndicator(minHeight: 3),
+              ),
               const SizedBox(height: 12),
             ],
 
@@ -95,14 +117,14 @@ class _DestinationSearchScreenState
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.history_rounded, size: 18, color: Colors.blue),
+                      Icon(Icons.history_rounded, size: 18, color: AppTheme.primaryColor),
                       SizedBox(width: 6),
                       Text(
-                        'SAVED & RECENT PLACES (OFFLINE)',
+                        'RECENT PLACES',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: Colors.blue,
+                          color: AppTheme.primaryColor,
                           letterSpacing: 0.8,
                         ),
                       ),
@@ -145,12 +167,26 @@ class _DestinationSearchScreenState
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.map_outlined,
-                                size: 64,
-                                color: Colors.grey.withValues(alpha: 0.5),
+                              Container(
+                                padding: const EdgeInsets.all(22),
+                                decoration: BoxDecoration(
+                                  gradient: AppTheme.primaryGradient,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.accentColor.withValues(alpha: 0.35),
+                                      blurRadius: 24,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.travel_explore_rounded,
+                                  size: 44,
+                                  color: Colors.white,
+                                ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 20),
                               const Text(
                                 'Search for a location above or\ntap directly on the map to set a pin.',
                                 textAlign: TextAlign.center,
@@ -183,17 +219,20 @@ class _DestinationSearchScreenState
     required ValueChanged<DestinationModel> onSelect,
   }) {
     if (destinations.isEmpty) {
-      return const Center(
+      final isSearching = ref.read(destinationNotifierProvider).isSearching;
+      return Center(
         child: Text(
-          'No matching places found. Try tapping on the map.',
-          style: TextStyle(color: Colors.grey),
+          isSearching
+              ? 'Searching…'
+              : 'No matching places found. Try tapping on the map.',
+          style: const TextStyle(color: Colors.grey),
         ),
       );
     }
 
     return ListView.separated(
       itemCount: destinations.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final destination = destinations[index];
 
@@ -207,47 +246,54 @@ class _DestinationSearchScreenState
           );
         }
 
-        return ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF3B82F6),
-            child: Icon(
-              Icons.location_on,
-              color: Colors.white,
-              size: 20,
+        return Card(
+          child: ListTile(
+            leading: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: AppTheme.primaryGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.place_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
-          ),
-          title: Text(
-            destination.name,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
+            title: Text(
+              destination.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
             ),
-          ),
-          subtitle: Text(
-            destination.address,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12),
-          ),
-          trailing: distance != null
-              ? Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    DistanceCalculator.formatDistance(distance),
-                    style: const TextStyle(
-                      color: Color(0xFF3B82F6),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+            subtitle: Text(
+              destination.address,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12),
+            ),
+            trailing: distance != null
+                ? Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                )
-              : null,
-          onTap: () => onSelect(destination),
+                    child: Text(
+                      DistanceCalculator.formatDistance(distance),
+                      style: const TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                : null,
+            onTap: () => onSelect(destination),
+          ),
         );
       },
     );

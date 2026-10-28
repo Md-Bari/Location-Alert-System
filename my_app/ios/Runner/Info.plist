@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>My App</string>
+	<string>Location Alert</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -65,12 +65,18 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location Alert requires your location to show your position on the map and calculate distance to destination.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Location Alert requires background location access to trigger proximity alerts when approaching your destination while the app is in background.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Location Alert requires background location access to trigger proximity alerts when approaching your destination while the screen is locked.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>TripTracking</key>
+		<string>Precise location is needed to follow your exact position on the map and alert you on arrival.</string>
+	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

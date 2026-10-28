@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../app/theme.dart';
 import '../../../core/utils/distance_calculator.dart';
+import '../../../shared/widgets/custom_button.dart';
 
 class WarningAlertDialog extends StatelessWidget {
   final String destinationName;
@@ -15,67 +17,14 @@ class WarningAlertDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Theme.of(context).cardColor,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF3C7), // Light amber
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.warning_amber_rounded,
-                size: 44,
-                color: Color(0xFFD97706),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '⚠️ APPROACHING DESTINATION',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFFD97706),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'You are approximately ${DistanceCalculator.formatDistance(distanceMeters)} from $destinationName.',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF59E0B),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: onDismiss,
-                child: const Text(
-                  'OK',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return _AlertCard(
+      gradient: AppTheme.warningGradient,
+      glowColor: AppTheme.warningColor,
+      icon: Icons.near_me_rounded,
+      title: 'Approaching Destination',
+      message: 'You are about ${DistanceCalculator.formatDistance(distanceMeters)} from $destinationName. Get ready!',
+      buttonText: 'GOT IT',
+      onPressed: onDismiss,
     );
   }
 }
@@ -92,66 +41,110 @@ class ArrivalAlertDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _AlertCard(
+      gradient: AppTheme.successGradient,
+      glowColor: AppTheme.successColor,
+      icon: Icons.where_to_vote_rounded,
+      title: 'You Have Arrived',
+      message: 'You reached $destinationName.',
+      buttonText: 'STOP TRACKING',
+      onPressed: onStopTracking,
+    );
+  }
+}
+
+class _AlertCard extends StatelessWidget {
+  final LinearGradient gradient;
+  final Color glowColor;
+  final IconData icon;
+  final String title;
+  final String message;
+  final String buttonText;
+  final VoidCallback onPressed;
+
+  const _AlertCard({
+    required this.gradient,
+    required this.glowColor,
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.buttonText,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Theme.of(context).cardColor,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1FAE5), // Light green
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_outline,
-                size: 44,
-                color: Color(0xFF059669),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '🔔 DESTINATION REACHED',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF059669),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'You have arrived at $destinationName.',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Gradient header with glowing icon
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 28),
+            decoration: BoxDecoration(gradient: gradient),
+            child: Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.6, end: 1.0),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.elasticOut,
+                builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ),
-                onPressed: onStopTracking,
-                child: const Text(
-                  'STOP TRACKING',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  child: Icon(icon, size: 44, color: glowColor),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+            child: Column(
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                CustomButton(
+                  text: buttonText,
+                  gradient: gradient,
+                  onPressed: onPressed,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

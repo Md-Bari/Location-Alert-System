@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vibration/vibration.dart';
 import '../../../core/constants/location_constants.dart';
 
+// Single shared instance; every public method initializes the plugin lazily.
 final notificationServiceProvider =
     Provider<NotificationService>((ref) => NotificationService());
 
